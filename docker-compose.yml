@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  # Next.js Frontend Application
+  nextjs-blog:
+    build:
+      context: ./nextjs
+      dockerfile: Dockerfile
+    container_name: nextjs-blog-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:./prisma/dev.db
+    volumes:
+      - ./nextjs:/app
+      - /app/node_modules
+      - /app/.next
+    restart: unless-stopped
+    networks:
+      - blog-network
+    depends_on:
+      - laravel-blog
+
+  # Laravel Backend Application
+  laravel-blog:
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    container_name: laravel-blog-app
+    ports:
+      - "8080:80"
+    volumes:
+      - ./laravel/storage/logs:/var/www/html/storage/logs
+      - ./laravel/database:/var/www/html/database
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=sqlite
+    restart: unless-stopped
+    networks:
+      - blog-network
+
+  # Optional: Add a database container if you want to use MySQL instead of SQLite
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: blog-mysql
+  #   ports:
+  #     - "3306:3306"
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
+  #     MYSQL_DATABASE: laravel_blog
+  #     MYSQL_USER: laravel
+  #     MYSQL_PASSWORD: laravel
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   networks:
+  #     - blog-network
+
+  # PostgreSQL Database (alternative to SQLite)
+  postgres:
+    image: postgres:15
+    container_name: blog-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: blog_database
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: blog_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - blog-network
+
+networks:
+  blog-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
